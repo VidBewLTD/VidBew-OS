@@ -93,8 +93,9 @@ void app_control_main(void *arg)
 const app_def_t display_def = { "Display", ICON_DISPLAY, { 0, 0 }, { 0, 0 }, { 0, 0 } };
 
 typedef struct { int w, h; } res_t;
-static const int depth_list[5] = { 8, 15, 16, 24, 32 };
-static const char *depth_label[5] = { "256 colors", "High Color (15-bit)", "High Color (16-bit)",
+static const int depth_list[7] = { 1, 4, 8, 15, 16, 24, 32 };
+static const char *depth_label[7] = { "Monochrome (1-bit)", "16 colors (4-bit)", "256 colors (8-bit)",
+                                      "High Color (15-bit)", "High Color (16-bit)",
                                       "True Color (24-bit)", "True Color (32-bit)" };
 
 static int mode_exists(int w, int h, int bpp)
@@ -151,10 +152,10 @@ static void dsp_paint(window_t *win, res_t *res, int nres, int sel, int top, int
 
         s_text(s, 214, 40, "Colors:", COL_BLACK, COL_NONE);
         int y = 62;
-        for (int i = 0; i < 5; i++) {
-            if (sel >= 0 && mode_exists(res[sel].w, res[sel].h, depth_list[i])) {
+        for (int i = 0; i < 7; i++) {
+            if (sel >= 0 && (mode_exists(res[sel].w, res[sel].h, depth_list[i]) || depth_list[i] == bpp)) {
                 ui_radio(s, 214, y, depth_label[i], bpp == depth_list[i]);
-                y += 26;
+                y += 24;
             }
         }
         char b[96];
@@ -244,10 +245,10 @@ void applet_display_main(void *arg)
                     }
                 } else {
                     int y = 62;
-                    for (int i = 0; i < 5; i++)
-                        if (mode_exists(res[sel].w, res[sel].h, depth_list[i])) {
+                    for (int i = 0; i < 7; i++)
+                        if (mode_exists(res[sel].w, res[sel].h, depth_list[i]) || depth_list[i] == bpp) {
                             if (ui_inside(ev.a, ev.b, 214, y - 2, 200, 18)) bpp = depth_list[i];
-                            y += 26;
+                            y += 24;
                         }
                 }
             } else {

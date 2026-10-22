@@ -225,9 +225,11 @@ static void dispi_write(u16 idx, u16 val) { outw(0x1CE, idx); outw(0x1CF, val); 
 const char *gfx_depth_name(int bpp)
 {
     switch (bpp) {
-    case 8:  return "256 colors";
-    case 15: return "32,768 colors";
-    case 16: return "65,536 colors";
+    case 1:  return "Monochrome (1-bit)";
+    case 4:  return "16 colors (4-bit)";
+    case 8:  return "256 colors (8-bit)";
+    case 15: return "32,768 colors (15-bit)";
+    case 16: return "65,536 colors (16-bit)";
     case 24: return "True Color (24-bit)";
     case 32: return "True Color (32-bit)";
     default: return "?";
