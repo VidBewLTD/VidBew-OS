@@ -1,0 +1,8 @@
+*.o
+*.bin
+*.elf
+*.img
+os.img
+os.iso
+__pycache__/
+tools/__pycache__/

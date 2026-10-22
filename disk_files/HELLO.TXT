@@ -1,0 +1,2 @@
+Hello from VidBew/OS's very own FAT16 filesystem driver! If you can read this, the disk driver and FAT16 reader both work correctly.
+Open this file in the File Explorer, or try: inspect hello.txt
