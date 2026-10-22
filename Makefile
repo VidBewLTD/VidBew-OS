@@ -29,7 +29,9 @@ SETTINGS_LBA = 2047
 FAT_PARTITION_SECTOR = 2048
 FAT_SIZE_MB = 15
 
-all: os.img
+all: os.img os.iso
+
+iso: os.iso
 
 boot.bin: boot.asm
 	$(ASM) -f bin -DSTAGE2_SECTORS=$(STAGE2_SECTORS) boot.asm -o boot.bin
@@ -73,6 +75,9 @@ os.img: boot.bin stage2.bin kernel.bin fat16.img
 	dd if=kernel.bin of=os.img bs=512 seek=$(KERNEL_LBA) conv=notrunc status=none
 	dd if=fat16.img of=os.img bs=512 seek=$(FAT_PARTITION_SECTOR) conv=notrunc status=none
 
+os.iso: os.img
+	genisoimage -b os.img -no-emul-boot -boot-load-size 4 -o os.iso .
+
 # Default QEMU gives the guest an e1000 NIC with user-mode networking, so
 # the Network applet works out of the box. Add -vga std (the default) for
 # live resolution switching.
@@ -80,6 +85,6 @@ run: os.img
 	qemu-system-i386 -drive format=raw,file=os.img
 
 clean:
-	rm -f *.o *.bin *.elf *.img
+	rm -f *.o *.bin *.elf *.img *.iso
 
-.PHONY: all run clean
+.PHONY: all run clean iso

@@ -34,6 +34,15 @@
 #define COL_WHITE         15
 #define COL_NONE          (-1)   /* "transparent" where a colour is optional */
 
+/* Extended palette color constants from 6x6x6 color cube */
+#define COL_ORANGE        (16 + 36 * 5 + 6 * 2 + 0)
+#define COL_PURPLE        (16 + 36 * 2 + 6 * 0 + 3)
+#define COL_AMBER         (16 + 36 * 5 + 6 * 3 + 0)
+#define COL_PINK          (16 + 36 * 5 + 6 * 2 + 3)
+#define COL_LIME          (16 + 36 * 2 + 6 * 5 + 0)
+#define COL_TEAL          (16 + 36 * 0 + 6 * 3 + 3)
+#define COL_NAVY          (16 + 36 * 0 + 6 * 0 + 2)
+
 #define FONT_WIDTH  8
 #define FONT_HEIGHT 16
 

@@ -80,6 +80,9 @@ static const scheme_t schemes[] = {
     { "Rose Garden",    CUBE(3,1,2),  CUBE(3,0,1), COL_WHITE, COL_DARK_GREY, COL_LIGHT_GREY, CUBE(3,0,1), COL_WHITE },
     { "Forest",         CUBE(1,2,1),  CUBE(0,2,0), COL_WHITE, COL_DARK_GREY, COL_LIGHT_GREY, CUBE(0,2,0), COL_WHITE },
     { "Desert",         CUBE(4,3,1),  CUBE(3,1,0), COL_WHITE, COL_DARK_GREY, COL_LIGHT_GREY, CUBE(3,1,0), COL_WHITE },
+    { "Cyberpunk",      CUBE(1,0,2),  CUBE(5,0,3), COL_WHITE, CUBE(2,0,3),   COL_LIGHT_GREY, CUBE(5,0,3), COL_WHITE },
+    { "Nordic Frost",   CUBE(0,2,3),  CUBE(1,3,4), COL_WHITE, COL_DARK_GREY, COL_LIGHT_GREY, CUBE(1,3,4), COL_WHITE },
+    { "Amber CRT",      COL_BLACK,    COL_AMBER,  COL_BLACK, COL_DARK_GREY, COL_WHITE,      COL_BLACK,  COL_AMBER },
     { "High Contrast",  COL_BLACK,    COL_YELLOW, COL_BLACK, COL_DARK_GREY, COL_WHITE,      COL_BLACK,  COL_YELLOW },
 };
 #define SCHEME_COUNT ((int)(sizeof(schemes) / sizeof(schemes[0])))
@@ -567,6 +570,7 @@ static void build_menu(int idx)
         ADD("Task Manager", CMD_TASKMAN, 0, 0);
         ADD("Program Manager", CMD_PROGMAN, 0, 0);
         ADD("Clock", CMD_CLOCK, 0, 0);
+        ADD("Text Editor", CMD_APP_BASE + APP_NOTEPAD, 0, 0);
         ADD("Calculator", CMD_APP_BASE + APP_CALC, 0, 0);
         ADD("Calendar", CMD_APP_BASE + APP_CALENDAR, 0, 0);
         ADD("Alarm", CMD_APP_BASE + APP_ALARM, 0, 0);

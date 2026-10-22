@@ -167,15 +167,19 @@ static void cmd_guide(term_t *t)
     tprint(t, " inventory        - list files on disk\n");
     tprint(t, " inspect <file>   - show a file's contents\n");
     tprint(t, " scribe <f> <txt> - write txt to file f\n");
-    tprint(t, " proclaim <text>  - print text back\n");
+    tprint(t, " proclaim/echo    - print text back\n");
     tprint(t, " chronicle        - version + uptime\n");
+    tprint(t, " uptime           - current uptime\n");
+    tprint(t, " meminfo          - heap memory allocation details\n");
+    tprint(t, " color <c>        - set text color (green, cyan, yellow, white, red, amber, pink, lime)\n");
+    tprint(t, " calc <expr>      - perform arithmetic expression\n");
+    tprint(t, " whoami           - display current user and system shell info\n");
     tprint(t, " vigil            - current date and time\n");
-    tprint(t, " horizon          - clear the screen\n");
+    tprint(t, " horizon/cls      - clear the screen\n");
     tprint(t, " essence          - what Heroine is\n");
     tprint(t, " resonate <file>  - play a WAV file\n");
-    tprint(t, " portal <app>     - open a window (explorer, terminal,\n");
-    tprint(t, "                    control, tasks, clock, keyboard,\n");
-    tprint(t, "                    network, display, help, about)\n");
+    tprint(t, " portal <app>     - open a window (explorer, terminal, control, tasks,\n");
+    tprint(t, "                    clock, keyboard, network, display, help, notepad, etc.)\n");
     tprint(t, " legion           - list running tasks\n");
     tprint(t, " vista            - display mode and available modes\n");
     tprint(t, " tether           - network status\n");
@@ -185,8 +189,83 @@ static void cmd_guide(term_t *t)
     tprint(t, " anchor <ip> <mask> <gw> [dns] - set a static address\n");
     tprint(t, " rebirth          - restart\n");
     tprint(t, " farewell         - shut down\n");
-    tprint(t, " shatter          - crash THIS terminal on purpose;\n");
-    tprint(t, "                    the rest of the OS keeps running\n");
+    tprint(t, " shatter          - crash THIS terminal on purpose\n");
+}
+
+static void cmd_meminfo(term_t *t)
+{
+    unsigned used, freeb, total;
+    heap_stats(&used, &freeb, &total);
+    tprintf(t, C_HEAD, "Heap Memory Info:\n");
+    tprintf(t, C_TEXT, "  Total Allocated Heap: %u KB (%u bytes)\n", total / 1024, total);
+    tprintf(t, C_TEXT, "  Used Heap Memory:     %u KB (%u bytes)\n", used / 1024, used);
+    tprintf(t, C_TEXT, "  Free Heap Memory:     %u KB (%u bytes)\n", freeb / 1024, freeb);
+}
+
+static void cmd_whoami(term_t *t)
+{
+    tprintf(t, C_TEXT, "User: hero (superuser)\nSystem: VidBew/OS (Heroine kernel & Nova shell)\nTask ID: %d\n", t->tid);
+}
+
+static void cmd_color(term_t *t, const char *arg)
+{
+    if (!*arg) {
+        tprint(t, "color options: green, cyan, yellow, white, red, amber, pink, lime, orange, teal\n");
+        return;
+    }
+    if (kstricmp(arg, "green") == 0) t->color = COL_LIGHT_GREEN;
+    else if (kstricmp(arg, "cyan") == 0) t->color = COL_LIGHT_CYAN;
+    else if (kstricmp(arg, "yellow") == 0) t->color = COL_YELLOW;
+    else if (kstricmp(arg, "white") == 0) t->color = COL_WHITE;
+    else if (kstricmp(arg, "red") == 0) t->color = COL_LIGHT_RED;
+    else if (kstricmp(arg, "amber") == 0) t->color = COL_AMBER;
+    else if (kstricmp(arg, "pink") == 0) t->color = COL_PINK;
+    else if (kstricmp(arg, "lime") == 0) t->color = COL_LIME;
+    else if (kstricmp(arg, "orange") == 0) t->color = COL_ORANGE;
+    else if (kstricmp(arg, "teal") == 0) t->color = COL_TEAL;
+    else {
+        tprint_c(t, C_ERROR, "Unknown color. Available: green, cyan, yellow, white, red, amber, pink, lime, orange, teal\n");
+        return;
+    }
+    tprint(t, "Terminal text color changed.\n");
+}
+
+static void cmd_calc(term_t *t, const char *arg)
+{
+    if (!*arg) {
+        tprint(t, "calc <num1> <op> <num2> (e.g. calc 42 * 7, calc 100 / 4)\n");
+        return;
+    }
+    int a = 0, b = 0;
+    char op = 0;
+    const char *p = arg;
+    while (*p == ' ') p++;
+    int sign = 1;
+    if (*p == '-') { sign = -1; p++; }
+    while (*p >= '0' && *p <= '9') { a = a * 10 + (*p - '0'); p++; }
+    a *= sign;
+    while (*p == ' ') p++;
+    if (*p == '+' || *p == '-' || *p == '*' || *p == '/') { op = *p; p++; }
+    while (*p == ' ') p++;
+    sign = 1;
+    if (*p == '-') { sign = -1; p++; }
+    while (*p >= '0' && *p <= '9') { b = b * 10 + (*p - '0'); p++; }
+    b *= sign;
+
+    if (!op) {
+        tprint_c(t, C_ERROR, "Invalid expression. Example: calc 15 + 27\n");
+        return;
+    }
+
+    int res = 0;
+    if (op == '+') res = a + b;
+    else if (op == '-') res = a - b;
+    else if (op == '*') res = a * b;
+    else if (op == '/') {
+        if (b == 0) { tprint_c(t, C_ERROR, "Error: division by zero.\n"); return; }
+        res = a / b;
+    }
+    tprintf(t, C_TEXT, "%d %c %d = %d\n", a, op, b, res);
 }
 
 static void cmd_inventory(term_t *t)
@@ -281,7 +360,7 @@ static void cmd_portal(term_t *t, const char *arg)
         { "network", APP_NETWORK }, { "display", APP_DISPLAY }, { "help", APP_HELP },
         { "about", APP_ABOUT }, { "programs", APP_PROGMAN },
         { "calc", APP_CALC }, { "calendar", APP_CALENDAR }, { "alarm", APP_ALARM },
-        { "paint", APP_PAINT }, { "images", APP_VIEWER },
+        { "paint", APP_PAINT }, { "images", APP_VIEWER }, { "notepad", APP_NOTEPAD },
     };
     for (unsigned i = 0; i < sizeof(map) / sizeof(map[0]); i++)
         if (kstricmp(arg, map[i].name) == 0) { app_launch(map[i].app); tprintf(t, C_TEXT, "Opening %s.\n", app_name(map[i].app)); return; }
@@ -441,9 +520,10 @@ static void cmd_anchor(term_t *t, const char *arg)
 
 typedef struct { const char *name; } cmdname_t;
 static const char *const cmd_names[] = {
-    "guide", "inventory", "inspect", "scribe", "proclaim", "chronicle", "vigil", "horizon",
-    "essence", "resonate", "portal", "legion", "vista", "tether", "summon", "beacon", "seek",
-    "anchor", "rebirth", "farewell", "shatter",
+    "anchor", "beacon", "calc", "chronicle", "cls", "color", "echo", "essence",
+    "farewell", "guide", "horizon", "inspect", "inventory", "legion", "meminfo",
+    "portal", "proclaim", "rebirth", "resonate", "scribe", "seek", "shatter",
+    "summon", "tether", "uptime", "vigil", "vista", "whoami",
 };
 #define NCMDS ((int)(sizeof(cmd_names) / sizeof(cmd_names[0])))
 
@@ -464,10 +544,15 @@ static void execute(term_t *t, const char *line)
     else if (!kstrcmp(cmd, "inventory")) cmd_inventory(t);
     else if (!kstrcmp(cmd, "inspect")) cmd_inspect(t, rest);
     else if (!kstrcmp(cmd, "scribe")) cmd_scribe(t, rest);
-    else if (!kstrcmp(cmd, "proclaim")) { tprint(t, rest); tprint(t, "\n"); }
+    else if (!kstrcmp(cmd, "proclaim") || !kstrcmp(cmd, "echo")) { tprint(t, rest); tprint(t, "\n"); }
     else if (!kstrcmp(cmd, "chronicle")) cmd_chronicle(t);
+    else if (!kstrcmp(cmd, "uptime")) tprintf(t, C_TEXT, "Uptime: %u seconds\n", (unsigned)(timer_ticks / 100));
+    else if (!kstrcmp(cmd, "meminfo")) cmd_meminfo(t);
+    else if (!kstrcmp(cmd, "whoami")) cmd_whoami(t);
+    else if (!kstrcmp(cmd, "color")) cmd_color(t, rest);
+    else if (!kstrcmp(cmd, "calc")) cmd_calc(t, rest);
     else if (!kstrcmp(cmd, "vigil")) cmd_vigil(t);
-    else if (!kstrcmp(cmd, "horizon")) clear_screen(t);
+    else if (!kstrcmp(cmd, "horizon") || !kstrcmp(cmd, "cls")) clear_screen(t);
     else if (!kstrcmp(cmd, "essence")) cmd_essence(t);
     else if (!kstrcmp(cmd, "resonate")) cmd_resonate(t, rest);
     else if (!kstrcmp(cmd, "portal")) cmd_portal(t, rest);
