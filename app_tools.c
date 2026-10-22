@@ -10,12 +10,13 @@
 #include "fat16.h"
 #include "audio.h"
 
-const app_def_t calc_def    = { "Calculator",   ICON_CONTROL,  { 0, 0 }, { 0, 0 }, { 0, 0 } };
-const app_def_t cal_def     = { "Calendar",     ICON_CALENDAR, { 0, 0 }, { 0, 0 }, { 0, 0 } };
-const app_def_t alarm_def   = { "Alarm",        ICON_CLOCK,    { 0, 0 }, { 0, 0 }, { 0, 0 } };
-const app_def_t paint_def   = { "Paint",        ICON_DISC,     { 0, 0 }, { 0, 0 }, { 0, 0 } };
-const app_def_t view_def    = { "Image Viewer", ICON_DISPLAY,  { 0, 0 }, { 0, 0 }, { 0, 0 } };
-const app_def_t notepad_def = { "Text Editor",  ICON_FILE,     { 0, 0 }, { 0, 0 }, { 0, 0 } };
+const app_def_t calc_def      = { "Calculator",   ICON_CONTROL,  { 0, 0 }, { 0, 0 }, { 0, 0 } };
+const app_def_t cal_def       = { "Calendar",     ICON_CALENDAR, { 0, 0 }, { 0, 0 }, { 0, 0 } };
+const app_def_t alarm_def     = { "Alarm",        ICON_CLOCK,    { 0, 0 }, { 0, 0 }, { 0, 0 } };
+const app_def_t paint_def     = { "Paint",        ICON_DISC,     { 0, 0 }, { 0, 0 }, { 0, 0 } };
+const app_def_t view_def      = { "Image Viewer", ICON_DISPLAY,  { 0, 0 }, { 0, 0 }, { 0, 0 } };
+const app_def_t notepad_def   = { "Text Editor",  ICON_FILE,     { 0, 0 }, { 0, 0 }, { 0, 0 } };
+const app_def_t installer_def = { "Setup Wizard", ICON_SYSTEM,   { 0, 0 }, { 0, 0 }, { 0, 0 } };
 
 /* ================================================================ BMP ==== */
 
@@ -206,6 +207,104 @@ void app_calc_main(void *arg)
             } else if (!op || fresh) { if (!op) acc = cur; }
             cur = acc; fresh = 1; dec = 0;
             op = (c == '=') ? 0 : c;
+        }
+    }
+}
+
+/* ======================================================= Setup / Installer === */
+
+#include "settings.h"
+
+void app_installer_main(void *arg)
+{
+    window_t *win = wm_create("VidBew/OS Setup Wizard", 420, 280, WF_NO_MIN | WF_NO_MAX | WF_TOPMOST, &installer_def);
+    if (!win) return;
+    wm_center(win);
+
+    int step = 0;   /* 0 = Welcome, 1 = Config, 2 = Complete */
+    int selected_scheme = 0;
+
+    for (;;) {
+        surface_t *s = wm_surface(win);
+        int cw, ch;
+        wm_client_size(win, &cw, &ch);
+
+        s_fill(s, 0, 0, cw, ch, COL_LIGHT_GREY);
+
+        /* Left banner */
+        s_fill(s, 0, 0, 110, ch, COL_BLUE);
+        icon_draw(s, 31, 20, 48, ICON_LOGO);
+        s_text(s, 16, 80, "VidBew/OS", COL_WHITE, COL_NONE);
+        s_text(s, 22, 100, "Setup", COL_YELLOW, COL_NONE);
+
+        /* Main area */
+        if (step == 0) {
+            s_text(s, 126, 16, "Welcome to VidBew/OS Setup!", COL_BLACK, COL_NONE);
+            s_text(s, 126, 46, "This wizard will initialize your system", COL_BLACK, COL_NONE);
+            s_text(s, 126, 64, "settings, default preferences, and FAT16", COL_BLACK, COL_NONE);
+            s_text(s, 126, 82, "configuration for first-time boot.", COL_BLACK, COL_NONE);
+
+            s_text(s, 126, 130, "Click 'Next' to begin system setup.", COL_DARK_GREY, COL_NONE);
+
+            ui_button(s, cw - 180, ch - 38, 80, 26, "Next >", 0, 0);
+            ui_button(s, cw - 90, ch - 38, 80, 26, "Cancel", 0, 0);
+        } else if (step == 1) {
+            s_text(s, 126, 16, "Select Default Theme:", COL_BLACK, COL_NONE);
+
+            for (int i = 0; i < 4; i++) {
+                int y = 42 + i * 36;
+                ui_radio(s, 136, y, wm_scheme_name(i), selected_scheme == i);
+            }
+
+            s_text(s, 126, 190, "Display: 800x600, 256 colors", COL_DARK_GREY, COL_NONE);
+
+            ui_button(s, cw - 270, ch - 38, 80, 26, "< Back", 0, 0);
+            ui_button(s, cw - 180, ch - 38, 80, 26, "Install", 0, 0);
+            ui_button(s, cw - 90, ch - 38, 80, 26, "Cancel", 0, 0);
+        } else {
+            s_text(s, 126, 20, "Installation Complete!", COL_BLACK, COL_NONE);
+            s_text(s, 126, 56, "VidBew/OS has been successfully configured.", COL_BLACK, COL_NONE);
+            s_text(s, 126, 80, "Your preferences have been saved to sector 2047.", COL_BLACK, COL_NONE);
+
+            s_text(s, 126, 140, "Click 'Finish' to launch the Nova Desktop.", COL_BLUE, COL_NONE);
+
+            ui_button(s, cw - 90, ch - 38, 80, 26, "Finish", 0, 0);
+        }
+
+        wm_invalidate(win);
+
+        event_t ev;
+        wm_next_event(win, &ev, -1);
+        if (ev.type == EV_CLOSE) { wm_destroy(win); return; }
+
+        if (ev.type == EV_MOUSE_DOWN && ev.c == 1) {
+            if (step == 0) {
+                if (ui_inside(ev.a, ev.b, cw - 180, ch - 38, 80, 26)) step = 1;
+                else if (ui_inside(ev.a, ev.b, cw - 90, ch - 38, 80, 26)) { wm_destroy(win); return; }
+            } else if (step == 1) {
+                for (int i = 0; i < 4; i++) {
+                    if (ui_inside(ev.a, ev.b, 136, 42 + i * 36, 200, 24)) selected_scheme = i;
+                }
+                if (ui_inside(ev.a, ev.b, cw - 270, ch - 38, 80, 26)) step = 0;
+                else if (ui_inside(ev.a, ev.b, cw - 180, ch - 38, 80, 26)) {
+                    /* Finalize setup */
+                    g_settings.magic = 0x534F4256; /* 'VBOS' */
+                    g_settings.version = 1;
+                    g_settings.disp_w = 800;
+                    g_settings.disp_h = 600;
+                    g_settings.disp_bpp = 8;
+                    g_settings.scheme = (u8)selected_scheme;
+                    g_settings.dbl_ticks = 40;
+                    g_settings.volume = 80;
+                    g_settings.mouse_pct = 100;
+                    g_settings.net_dhcp = 1;
+                    settings_save();
+                    wm_set_scheme(selected_scheme);
+                    step = 2;
+                } else if (ui_inside(ev.a, ev.b, cw - 90, ch - 38, 80, 26)) { wm_destroy(win); return; }
+            } else if (step == 2) {
+                if (ui_inside(ev.a, ev.b, cw - 90, ch - 38, 80, 26)) { wm_destroy(win); return; }
+            }
         }
     }
 }

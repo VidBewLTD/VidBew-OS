@@ -41,6 +41,7 @@ static const app_info_t apps[APP_COUNT] = {
     [APP_PAINT]    = { "Paint",            ICON_DISC,     app_paint_main,      &paint_def,    0 },
     [APP_VIEWER]   = { "Image Viewer",     ICON_DISPLAY,  app_view_main,       &view_def,     0 },
     [APP_NOTEPAD]  = { "Text Editor",      ICON_FILE,     app_notepad_main,    &notepad_def,  0 },
+    [APP_INSTALLER]= { "Setup Wizard",     ICON_SYSTEM,   app_installer_main,  &installer_def,1 },
 };
 
 static unsigned long launch_tick[APP_COUNT];

@@ -10,7 +10,7 @@ enum {
     APP_PROGMAN, APP_EXPLORER, APP_TERMINAL, APP_CONTROL, APP_TASKMAN, APP_CLOCK,
     APP_OSK, APP_ABOUT, APP_HELP,
     APP_DISPLAY, APP_NETWORK, APP_INPUT, APP_SOUND, APP_DATETIME, APP_SYSTEM,
-    APP_CALC, APP_CALENDAR, APP_ALARM, APP_PAINT, APP_VIEWER, APP_NOTEPAD,
+    APP_CALC, APP_CALENDAR, APP_ALARM, APP_PAINT, APP_VIEWER, APP_NOTEPAD, APP_INSTALLER,
     APP_COUNT
 };
 
@@ -55,10 +55,11 @@ void app_alarm_main(void *arg);
 void app_paint_main(void *arg);
 void app_view_main(void *arg);
 void app_notepad_main(void *arg);
+void app_installer_main(void *arg);
 
 extern const app_def_t progman_def, explorer_def, terminal_def, control_def, taskman_def, clock_def,
                        osk_def, about_def, help_def, display_def, network_def, input_def, sound_def,
                        datetime_def, system_def,
-                       calc_def, cal_def, alarm_def, paint_def, view_def, notepad_def;
+                       calc_def, cal_def, alarm_def, paint_def, view_def, notepad_def, installer_def;
 
 #endif

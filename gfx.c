@@ -10,6 +10,7 @@
 #include "heap.h"
 #include "kstd.h"
 #include "serial.h"
+#include "vbai_logo.h"
 
 surface_t gfx_screen;
 
@@ -323,22 +324,83 @@ int gfx_set_mode_live(int w, int h, int bpp)
     return 1;
 }
 
-/* ---------------- panic banner (no allocations, no locks) ---------------- */
+/* ---------------- boot splash ---------------- */
+
+void gfx_bootscreen(int percent, const char *status)
+{
+    if (!fb) return;
+    surface_t *s = &gfx_screen;
+    s_fill(s, 0, 0, s->w, s->h, COL_BLACK);
+
+    /* Draw centered VBAI Logo */
+    int lx = (s->w - VBAI_LOGO_W) / 2;
+    int ly = (s->h - VBAI_LOGO_H) / 2 - 20;
+    if (lx >= 0 && ly >= 0) {
+        for (int row = 0; row < VBAI_LOGO_H; row++) {
+            for (int col = 0; col < VBAI_LOGO_W; col++) {
+                u8 c = vbai_logo_px[row * VBAI_LOGO_W + col];
+                s_pixel(s, lx + col, ly + row, c);
+            }
+        }
+    }
+
+    /* Status and Title */
+    const char *title = "VidBew/OS Starting...";
+    s_text(s, (s->w - s_text_width(title)) / 2, ly + VBAI_LOGO_H + 20, title, COL_WHITE, COL_NONE);
+
+    if (status && *status) {
+        s_text(s, (s->w - s_text_width(status)) / 2, ly + VBAI_LOGO_H + 42, status, COL_LIGHT_CYAN, COL_NONE);
+    }
+
+    /* Progress bar */
+    int pw = 240, ph = 12;
+    int px = (s->w - pw) / 2, py = ly + VBAI_LOGO_H + 65;
+    s_rect(s, px, py, pw, ph, COL_WHITE);
+    if (percent < 0) percent = 0;
+    if (percent > 100) percent = 100;
+    int fill_w = (pw - 4) * percent / 100;
+    if (fill_w > 0) s_fill(s, px + 2, py + 2, fill_w, ph - 4, COL_LIGHT_BLUE);
+
+    gfx_present(0, 0, s->w, s->h);
+}
+
+/* ---------------- BSOD / Panic Screen ---------------- */
 
 void gfx_panic(const char *msg)
 {
     if (!fb) return;
-    for (int y = 0; y < 40; y++)
-        for (int x = 0; x < fb_w; x++) fb_put(x, y, COL_RED);
-    int px = 8;
-    for (const char *p = msg; *p && px + 8 < fb_w; p++, px += 8) {
-        int ch = (unsigned char)*p;
-        if (ch < FONT_FIRST_CHAR || ch > FONT_LAST_CHAR) ch = ' ';
-        const u8 *g = font8x16[ch - FONT_FIRST_CHAR];
-        for (int r = 0; r < 16; r++)
-            for (int c = 0; c < 8; c++)
-                if (g[r] & (0x80 >> c)) fb_put(px + c, 12 + r, COL_WHITE);
+    surface_t *s = &gfx_screen;
+    s_fill(s, 0, 0, s->w, s->h, COL_BLUE);
+
+    /* Center Box */
+    int bw = s->w > 500 ? 500 : s->w - 20;
+    int bh = s->h > 320 ? 320 : s->h - 20;
+    int bx = (s->w - bw) / 2, by = (s->h - bh) / 2;
+
+    s_fill(s, bx, by, bw, bh, COL_BLUE);
+    s_rect(s, bx, by, bw, bh, COL_WHITE);
+    s_rect(s, bx + 2, by + 2, bw - 4, bh - 4, COL_WHITE);
+
+    /* Title */
+    const char *title = " VidBew/OS -- Fatal System Error ";
+    s_text(s, bx + (bw - s_text_width(title)) / 2, by + 12, title, COL_BLUE, COL_WHITE);
+
+    s_text(s, bx + 16, by + 42, "A fatal exception or kernel panic has occurred.", COL_WHITE, COL_NONE);
+    s_text(s, bx + 16, by + 60, "The current task or kernel halted to prevent damage.", COL_WHITE, COL_NONE);
+
+    s_hline(s, bx + 10, by + 85, bw - 20, COL_WHITE);
+
+    s_text(s, bx + 16, by + 100, "Error Information:", COL_YELLOW, COL_NONE);
+    if (msg) {
+        s_text(s, bx + 16, by + 120, msg, COL_WHITE, COL_NONE);
     }
+
+    s_hline(s, bx + 10, by + 200, bw - 20, COL_WHITE);
+
+    s_text(s, bx + 16, by + 220, "* Press Ctrl+Alt+Del or restart your machine.", COL_LIGHT_GREY, COL_NONE);
+    s_text(s, bx + 16, by + 240, "* System halted safely.", COL_LIGHT_GREY, COL_NONE);
+
+    gfx_present(0, 0, s->w, s->h);
 }
 
 /* ---------------- surfaces ---------------- */

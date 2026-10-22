@@ -68,6 +68,7 @@ void gfx_present(int x, int y, int w, int h);       /* backbuffer rect -> frameb
 void gfx_cursor_show(int visible);
 void gfx_cursor_move(int x, int y);
 void gfx_panic(const char *msg);                    /* draw an error banner straight to the display */
+void gfx_bootscreen(int percent, const char *status); /* draw boot splash screen */
 const char *gfx_depth_name(int bpp);
 
 /* ---- surfaces ---- */

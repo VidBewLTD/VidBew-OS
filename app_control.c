@@ -375,7 +375,7 @@ static void test_sound_task(void *arg) { audio_play_file("CHIME.WAV", 0, 0); }
 static void sn_paint(window_t *win, int pressed_btn)
 {
     surface_t *s = wm_surface(win);
-    s_fill(s, 0, 0, SN_W, SN_H, COL_LIGHT_GREY);
+    s_fill(s, 0, 0, SN_W, SN_H + 30, COL_LIGHT_GREY);
     icon_draw(s, 14, 12, 48, ICON_DISC);
     if (sb16_present()) {
         s_text(s, 76, 18, "Sound Blaster 16", COL_BLACK, COL_NONE);
@@ -384,20 +384,24 @@ static void sn_paint(window_t *win, int pressed_btn)
         s_text(s, 76, 18, "No sound card detected.", COL_BLACK, COL_NONE);
         s_text(s, 76, 38, "Start QEMU with -device sb16.", COL_DARK_GREY, COL_NONE);
     }
-    ui_groupbox(s, 10, 76, SN_W - 20, 70, "Volume");
+    ui_groupbox(s, 10, 70, SN_W - 20, 64, "Volume");
     int dis = !sb16_present();
-    ui_slider(s, 24, 106, 240, 0, 100, sb16_get_volume());
+    ui_slider(s, 24, 96, 240, 0, 100, sb16_get_volume());
     char b[16];
     ksnprintf(b, sizeof(b), "%d%%", sb16_get_volume());
-    s_text(s, 276, 104, b, dis ? COL_DARK_GREY : COL_BLACK, COL_NONE);
-    ui_button(s, 10, SN_H - 40, 110, 28, "Test Sound", pressed_btn == 0, dis);
-    ui_button(s, SN_W - 94, SN_H - 40, 84, 28, "Close", pressed_btn == 1, 0);
+    s_text(s, 276, 94, b, dis ? COL_DARK_GREY : COL_BLACK, COL_NONE);
+
+    ui_groupbox(s, 10, 142, SN_W - 20, 52, "Startup Audio");
+    ui_checkbox(s, 24, 162, "Play boot chime sound", g_settings.boot_chime, dis);
+
+    ui_button(s, 10, SN_H + 30 - 40, 110, 28, "Test Sound", pressed_btn == 0, dis);
+    ui_button(s, SN_W - 94, SN_H + 30 - 40, 84, 28, "Close", pressed_btn == 1, 0);
     wm_invalidate(win);
 }
 
 void applet_sound_main(void *arg)
 {
-    window_t *win = wm_create("Sound", SN_W, SN_H, WF_NO_MIN | WF_NO_MAX, &sound_def);
+    window_t *win = wm_create("Sound", SN_W, SN_H + 30, WF_NO_MIN | WF_NO_MAX, &sound_def);
     if (!win) return;
     wm_center(win);
     int pressed = -1, slider = 0;
@@ -410,17 +414,21 @@ void applet_sound_main(void *arg)
         case EV_KEY: if (ev.a == 27 || ev.a == '\n') { wm_destroy(win); return; } break;
         case EV_MOUSE_DOWN:
             if (ev.c != 1) break;
-            if (ui_inside(ev.a, ev.b, 24, 102, 250, 22)) { slider = 1; sb16_set_volume(ui_slider_value(24, 240, 0, 100, ev.a)); }
-            if (ui_inside(ev.a, ev.b, 10, SN_H - 40, 110, 28) && sb16_present()) pressed = 0;
-            if (ui_inside(ev.a, ev.b, SN_W - 94, SN_H - 40, 84, 28)) pressed = 1;
+            if (ui_inside(ev.a, ev.b, 24, 92, 250, 22)) { slider = 1; sb16_set_volume(ui_slider_value(24, 240, 0, 100, ev.a)); }
+            if (ui_inside(ev.a, ev.b, 24, 162, 200, 20)) {
+                g_settings.boot_chime = !g_settings.boot_chime;
+                settings_save();
+            }
+            if (ui_inside(ev.a, ev.b, 10, SN_H + 30 - 40, 110, 28) && sb16_present()) pressed = 0;
+            if (ui_inside(ev.a, ev.b, SN_W - 94, SN_H + 30 - 40, 84, 28)) pressed = 1;
             break;
         case EV_MOUSE_MOVE:
             if (slider) sb16_set_volume(ui_slider_value(24, 240, 0, 100, ev.a));
             break;
         case EV_MOUSE_UP:
             if (slider) { g_settings.volume = (u8)sb16_get_volume(); settings_save(); slider = 0; }
-            if (pressed == 0 && ui_inside(ev.a, ev.b, 10, SN_H - 40, 110, 28)) task_create("sound test", test_sound_task, 0, 0);
-            if (pressed == 1 && ui_inside(ev.a, ev.b, SN_W - 94, SN_H - 40, 84, 28)) { wm_destroy(win); return; }
+            if (pressed == 0 && ui_inside(ev.a, ev.b, 10, SN_H + 30 - 40, 110, 28)) task_create("sound test", test_sound_task, 0, 0);
+            if (pressed == 1 && ui_inside(ev.a, ev.b, SN_W - 94, SN_H + 30 - 40, 84, 28)) { wm_destroy(win); return; }
             pressed = -1;
             break;
         default: break;

@@ -61,6 +61,8 @@ void kmain(void)
         serial_print("FATAL: could not set up the display\n");
         for (;;) __asm__ volatile("hlt");
     }
+    gfx_bootscreen(10, "Initializing system hardware...");
+
     char m[120];
     ksnprintf(m, sizeof(m), "display: %dx%d, %d bpp (%s), %d modes available, live switching %s\n",
               gfx_screen.w, gfx_screen.h, gfx_cur_bpp(), gfx_depth_name(gfx_cur_bpp()),
@@ -70,6 +72,8 @@ void kmain(void)
     tasks_init();
     idt_init();
     timer_init(TIMER_HZ);
+    gfx_bootscreen(30, "Loading drivers & interrupts...");
+
     keyboard_init();
     input_mode_init();
 
@@ -80,6 +84,7 @@ void kmain(void)
         input_mode_notify_keyboard_nav();
     }
 
+    gfx_bootscreen(60, "Initializing storage & filesystem...");
     if (fat16_init(FAT_PARTITION_LBA)) {
         serial_print("fat16: ready.\n");
         run_filesystem_demo();
@@ -87,6 +92,7 @@ void kmain(void)
         serial_print("fat16: init FAILED\n");
     }
 
+    gfx_bootscreen(80, "Starting sound & network services...");
     audio_init();
     if (sb16_init()) serial_print("sb16: Sound Blaster 16 ready.\n");
     else serial_print("sb16: not present -- audio unavailable.\n");
@@ -99,8 +105,13 @@ void kmain(void)
     else serial_print("net: no supported network adapter.\n");
     settings_apply();
 
+    gfx_bootscreen(100, "Starting Nova Desktop...");
+
     __asm__ volatile("sti");
 
+    if (g_settings.magic != 0x534F4256) {  /* 'VBOS' */
+        app_launch(APP_INSTALLER);
+    }
     app_launch(APP_PROGMAN);
     app_launch(APP_EXPLORER);
     serial_print("VidBew/OS ready -- Nova desktop, Heroine kernel underneath.\n");

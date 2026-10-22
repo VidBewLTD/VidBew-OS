@@ -24,6 +24,8 @@ static void defaults(void)
     g_settings.mouse_pct = 100;
     g_settings.volume = 80;
     g_settings.net_dhcp = 1;
+    g_settings.boot_chime = 1;
+    g_settings.show_bootscreen = 1;
 }
 
 void settings_load(void)

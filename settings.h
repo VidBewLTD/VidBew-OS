@@ -20,7 +20,9 @@ typedef struct __attribute__((packed)) {
     u16 mouse_pct;        /* pointer speed, percent (50-300) */
     u8  net_dhcp;
     u8  ip[4], mask[4], gw[4], dns[4];
-    u8  pad[31];
+    u8  boot_chime;       /* 1 = play chime at boot */
+    u8  show_bootscreen;  /* 1 = show VBAI bootscreen splash */
+    u8  pad[29];
 } settings_t;
 
 extern settings_t g_settings;
