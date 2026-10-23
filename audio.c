@@ -36,3 +36,29 @@ int audio_play_file(const char *name, wav_info_t *info_out, unsigned int *pcm_le
     mutex_unlock(&audio_lock);
     return rc;
 }
+
+void audio_play_chime(void)
+{
+    if (!sb16_present()) return;
+    mutex_lock(&audio_lock);
+    if (!pcm_buf) pcm_buf = (unsigned char *)kmalloc(SB16_BUFFER_CAPACITY);
+    if (pcm_buf) {
+        /* Generate two quick pleasant tones (E5 ~659Hz, B5 ~987Hz) for PS3 toast chime */
+        unsigned int sr = 22050;
+        unsigned int dur1 = sr / 12;  /* ~83ms */
+        unsigned int dur2 = sr / 8;   /* ~125ms */
+        unsigned int total = dur1 + dur2;
+        if (total > SB16_BUFFER_CAPACITY) total = SB16_BUFFER_CAPACITY;
+        for (unsigned int i = 0; i < dur1; i++) {
+            /* 659Hz sine/triangle wave approximation */
+            int phase = (i * 659) / sr;
+            pcm_buf[i] = (phase % 2 == 0) ? 180 : 76;
+        }
+        for (unsigned int i = dur1; i < total; i++) {
+            int phase = ((i - dur1) * 987) / sr;
+            pcm_buf[i] = (phase % 2 == 0) ? 190 : 66;
+        }
+        sb16_play_u8_mono(pcm_buf, total, sr);
+    }
+    mutex_unlock(&audio_lock);
+}

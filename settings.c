@@ -26,6 +26,9 @@ static void defaults(void)
     g_settings.net_dhcp = 1;
     g_settings.boot_chime = 1;
     g_settings.show_bootscreen = 1;
+    g_settings.taskbar_pos = 0;       /* bottom */
+    g_settings.taskbar_autohide = 0;  /* disabled */
+    g_settings.show_menubar = 1;     /* visible */
 }
 
 void settings_load(void)

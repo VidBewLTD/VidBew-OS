@@ -137,6 +137,9 @@ static void dsp_paint(window_t *win, res_t *res, int nres, int sel, int top, int
     s_fill(s, 9, 28, tab == 0 ? 90 : 0, 2, COL_LIGHT_GREY);
 
     if (tab == 0) {
+        ui_groupbox(s, 214, 180, 196, 52, "Taskbar & Menus");
+        ui_checkbox(s, 222, 196, "Top Taskbar", g_settings.taskbar_pos == 1, 0);
+        ui_checkbox(s, 222, 212, "Show Top Menu Bar", g_settings.show_menubar, 0);
         s_text(s, 16, 40, "Screen area:", COL_BLACK, COL_NONE);
         s_fill(s, 16, 60, 176, 148, COL_WHITE);
         s_bevel(s, 16, 60, 176, 148, 1);
@@ -250,6 +253,16 @@ void applet_display_main(void *arg)
                             if (ui_inside(ev.a, ev.b, 214, y - 2, 200, 18)) bpp = depth_list[i];
                             y += 24;
                         }
+                    if (ui_inside(ev.a, ev.b, 222, 196, 180, 16)) {
+                        g_settings.taskbar_pos = (g_settings.taskbar_pos == 1) ? 0 : 1;
+                        settings_save();
+                        wm_post_command(CMD_CYCLE_MODE); /* triggers layout update */
+                    }
+                    if (ui_inside(ev.a, ev.b, 222, 212, 180, 16)) {
+                        g_settings.show_menubar = g_settings.show_menubar ? 0 : 1;
+                        settings_save();
+                        wm_post_command(CMD_CYCLE_MODE);
+                    }
                 }
             } else {
                 for (int i = 0; i < wm_scheme_count(); i++)

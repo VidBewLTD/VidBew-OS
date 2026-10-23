@@ -115,6 +115,9 @@ void       wm_scheme_swatch(int i, int *desktop, int *title);
 void       wm_set_dblclick_ticks(int ticks);
 int        wm_get_dblclick_ticks(void);
 
+/* PS3-style Notifications */
+void wm_notify(icon_type_t icon, const char *title, const char *msg);
+
 /* ---- for the kernel ---- */
 void wm_init(void);
 void wm_ui_iteration(void);            /* one pass of the UI loop (input, damage, compose) */
