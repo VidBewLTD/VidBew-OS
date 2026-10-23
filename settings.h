@@ -22,7 +22,10 @@ typedef struct __attribute__((packed)) {
     u8  ip[4], mask[4], gw[4], dns[4];
     u8  boot_chime;       /* 1 = play chime at boot */
     u8  show_bootscreen;  /* 1 = show VBAI bootscreen splash */
-    u8  pad[29];
+    u8  taskbar_pos;      /* 0 = bottom, 1 = top */
+    u8  taskbar_autohide; /* 0 = off, 1 = on */
+    u8  show_menubar;     /* 1 = visible, 0 = hidden */
+    u8  pad[26];
 } settings_t;
 
 extern settings_t g_settings;

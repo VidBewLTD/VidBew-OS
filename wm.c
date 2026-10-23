@@ -22,6 +22,8 @@
 #include "rtc.h"
 #include "net.h"
 #include "serial.h"
+#include "audio.h"
+#include "settings.h"
 
 #define MAX_WIN   24
 #define EVQ       32
@@ -154,16 +156,31 @@ static void damage_add(int x, int y, int w, int h)
 
 static void damage_all(void) { damage_add(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT); }
 static void damage_window(window_t *w) { damage_add(w->x, w->y, w->w, w->h); }
-static void damage_taskbar(void) { damage_add(0, SCREEN_HEIGHT - TASKBAR_H, SCREEN_WIDTH, TASKBAR_H); }
+static void damage_taskbar(void)
+{
+    int ty = (g_settings.taskbar_pos == 1) ? (g_settings.show_menubar ? MENUBAR_H : 0) : (SCREEN_HEIGHT - TASKBAR_H);
+    damage_add(0, ty, SCREEN_WIDTH, TASKBAR_H);
+}
 
 /* ---------------------------------------------------------------- geometry */
 
 static void work_area(int *x, int *y, int *w, int *h)
 {
+    int top_margin = g_settings.show_menubar ? MENUBAR_H : 0;
+    int bottom_margin = 0;
+
+    if (g_settings.taskbar_pos == 1) { /* Top taskbar */
+        top_margin += TASKBAR_H;
+    } else { /* Bottom taskbar */
+        if (!g_settings.taskbar_autohide) {
+            bottom_margin += TASKBAR_H;
+        }
+    }
+
     *x = 0;
-    *y = MENUBAR_H;
+    *y = top_margin;
     *w = SCREEN_WIDTH;
-    *h = SCREEN_HEIGHT - MENUBAR_H - TASKBAR_H;
+    *h = SCREEN_HEIGHT - top_margin - bottom_margin;
 }
 
 static void win_update_outer(window_t *w)
@@ -491,6 +508,61 @@ static int cmdq_pop(int *cmd)
     return ok;
 }
 
+/* ---------------------------------------------------------------- PS3 notifications */
+
+typedef struct {
+    int active;
+    icon_type_t icon;
+    char title[32];
+    char msg[64];
+    unsigned long expire_ticks;
+} notification_t;
+
+static notification_t current_notify = {0};
+
+void wm_notify(icon_type_t icon, const char *title, const char *msg)
+{
+    mutex_lock(&wm_lock);
+    current_notify.active = 1;
+    current_notify.icon = icon;
+    kstrlcpy(current_notify.title, title, sizeof(current_notify.title));
+    kstrlcpy(current_notify.msg, msg, sizeof(current_notify.msg));
+    current_notify.expire_ticks = timer_ticks + 300; /* ~3 seconds */
+    damage_all();
+    mutex_unlock(&wm_lock);
+    audio_play_chime();
+}
+
+static void draw_notification(surface_t *s)
+{
+    if (!current_notify.active) return;
+    if (timer_ticks > current_notify.expire_ticks) {
+        current_notify.active = 0;
+        damage_all();
+        return;
+    }
+
+    int nw = 220, nh = 44;
+    int nx = SCREEN_WIDTH - nw - 12;
+    int ny = (g_settings.show_menubar ? MENUBAR_H : 0) + 8;
+    if (g_settings.taskbar_pos == 1) { /* top taskbar */
+        ny += TASKBAR_H;
+    }
+
+    if (!rect_hit(s, nx, ny, nw, nh)) return;
+
+    /* PS3 sleek notification toast styling: dark translucent box with rounded look & glow accent */
+    s_fill(s, nx + 2, ny + 2, nw, nh, COL_DARK_GREY);
+    s_fill(s, nx, ny, nw, nh, COL_BLACK);
+    s_rect(s, nx, ny, nw, nh, COL_LIGHT_GREY);
+    s_hline(s, nx + 1, ny + 1, nw - 2, COL_WHITE);
+    s_vline(s, nx + 1, ny + 1, nh - 2, COL_WHITE);
+
+    icon_draw_small(s, nx + 8, ny + 14, current_notify.icon);
+    s_text(s, nx + 28, ny + 8, current_notify.title, COL_YELLOW, COL_NONE);
+    s_text_n(s, nx + 28, ny + 24, current_notify.msg, (nw - 34) / FONT_WIDTH, COL_WHITE, COL_NONE);
+}
+
 /* ---------------------------------------------------------------- UI state */
 
 typedef struct { const char *label; int cmd; int flags; const char *hint; } mrow_t;
@@ -631,7 +703,7 @@ static void dropdown_rect(int *x, int *y, int *w, int *h)
     *h = hh;
     *x = mb_x[menu_open];
     if (*x + *w > SCREEN_WIDTH) *x = SCREEN_WIDTH - *w;
-    *y = MENUBAR_H;
+    *y = g_settings.show_menubar ? MENUBAR_H : 0;
 }
 
 static int dropdown_item_at(int px, int py)
@@ -684,7 +756,11 @@ static void start_rect(int *x, int *y, int *w, int *h)
     *w = START_W;
     *h = hh;
     *x = 2;
-    *y = SCREEN_HEIGHT - TASKBAR_H - hh;
+    if (g_settings.taskbar_pos == 1) { /* top taskbar */
+        *y = (g_settings.show_menubar ? MENUBAR_H : 0) + TASKBAR_H;
+    } else { /* bottom taskbar */
+        *y = SCREEN_HEIGHT - TASKBAR_H - hh;
+    }
 }
 
 static int start_item_at(int px, int py)
@@ -810,6 +886,7 @@ static void draw_desktop(surface_t *s)
 
 static void draw_menubar(surface_t *s)
 {
+    if (!g_settings.show_menubar) return;
     if (!rect_hit(s, 0, 0, SCREEN_WIDTH, MENUBAR_H)) return;
     s_fill(s, 0, 0, SCREEN_WIDTH, MENUBAR_H, theme->menubar);
     s_hline(s, 0, MENUBAR_H - 1, SCREEN_WIDTH, COL_BLACK);
@@ -906,7 +983,10 @@ static int task_btn_w(int n)
 
 static void draw_taskbar(surface_t *s)
 {
-    int ty = SCREEN_HEIGHT - TASKBAR_H;
+    int ty = (g_settings.taskbar_pos == 1) ? (g_settings.show_menubar ? MENUBAR_H : 0) : (SCREEN_HEIGHT - TASKBAR_H);
+    if (g_settings.taskbar_autohide && g_settings.taskbar_pos == 0) {
+        if (mouse_y < SCREEN_HEIGHT - TASKBAR_H && !start_open) return;
+    }
     if (!rect_hit(s, 0, ty, SCREEN_WIDTH, TASKBAR_H)) return;
     s_fill(s, 0, ty, SCREEN_WIDTH, TASKBAR_H, COL_LIGHT_GREY);
     s_hline(s, 0, ty, SCREEN_WIDTH, COL_WHITE);
@@ -966,6 +1046,7 @@ static void compose_rect(int x0, int y0, int x1, int y1)
     draw_taskbar(s);
     draw_dropdown(s);
     draw_start_menu(s);
+    draw_notification(s);
     surf_reset_clip(s);
     gfx_present(x0, y0, x1 - x0, y1 - y0);
 }
@@ -1309,7 +1390,7 @@ static void on_left_down(int x, int y)
     if (menu_open >= 0) {
         int item = dropdown_item_at(x, y);
         if (item >= 0) { menu_hover = item; damage_dropdown(); return; }
-        if (y < MENUBAR_H) {
+    if (g_settings.show_menubar && y < MENUBAR_H) {
             for (int i = 0; i < 6; i++)
                 if (x >= mb_x[i] && x < mb_x[i] + mb_w[i]) {
                     if (i == menu_open) close_menus(); else open_menu(i);
@@ -1324,19 +1405,21 @@ static void on_left_down(int x, int y)
     if (start_open) {
         int item = start_item_at(x, y);
         if (item >= 0) { start_hover = item; damage_start(); return; }
-        if (y >= SCREEN_HEIGHT - TASKBAR_H && x >= START_BTN_X && x < START_BTN_X + START_BTN_W) { taskbar_press(x, y); return; }
+    int ty = (g_settings.taskbar_pos == 1) ? (g_settings.show_menubar ? MENUBAR_H : 0) : (SCREEN_HEIGHT - TASKBAR_H);
+    if (y >= ty && y < ty + TASKBAR_H && x >= START_BTN_X && x < START_BTN_X + START_BTN_W) { taskbar_press(x, y); return; }
         damage_start();
         start_open = 0;
         start_hover = -1;
-        damage_add(0, SCREEN_HEIGHT - TASKBAR_H, SCREEN_WIDTH, TASKBAR_H);
+    damage_taskbar();
         return;
     }
-    if (y < MENUBAR_H) {
+if (g_settings.show_menubar && y < MENUBAR_H) {
         for (int i = 0; i < 6; i++)
             if (x >= mb_x[i] && x < mb_x[i] + mb_w[i]) { open_menu(i); return; }
         return;
     }
-    if (y >= SCREEN_HEIGHT - TASKBAR_H) { taskbar_press(x, y); return; }
+int ty = (g_settings.taskbar_pos == 1) ? (g_settings.show_menubar ? MENUBAR_H : 0) : (SCREEN_HEIGHT - TASKBAR_H);
+if (y >= ty && y < ty + TASKBAR_H) { taskbar_press(x, y); return; }
 
     window_t *w = window_at(x, y);
     if (w) { window_press(w, x, y, dbl); return; }

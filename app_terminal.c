@@ -518,11 +518,22 @@ static void cmd_anchor(term_t *t, const char *arg)
     tprint(t, "Static address set and saved.\n");
 }
 
+static void cmd_notify(term_t *t, const char *arg)
+{
+    if (!*arg) {
+        wm_notify(ICON_INFO, "VidBew OS", "Test Notification");
+        tprint(t, "Notification posted.\n");
+        return;
+    }
+    wm_notify(ICON_INFO, "Heroine", arg);
+    tprint(t, "Notification posted.\n");
+}
+
 typedef struct { const char *name; } cmdname_t;
 static const char *const cmd_names[] = {
     "anchor", "beacon", "calc", "chronicle", "cls", "color", "echo", "essence",
     "farewell", "guide", "horizon", "inspect", "inventory", "legion", "meminfo",
-    "portal", "proclaim", "rebirth", "resonate", "scribe", "seek", "shatter",
+    "notify", "portal", "proclaim", "rebirth", "resonate", "scribe", "seek", "shatter",
     "summon", "tether", "uptime", "vigil", "vista", "whoami",
 };
 #define NCMDS ((int)(sizeof(cmd_names) / sizeof(cmd_names[0])))
@@ -548,6 +559,7 @@ static void execute(term_t *t, const char *line)
     else if (!kstrcmp(cmd, "chronicle")) cmd_chronicle(t);
     else if (!kstrcmp(cmd, "uptime")) tprintf(t, C_TEXT, "Uptime: %u seconds\n", (unsigned)(timer_ticks / 100));
     else if (!kstrcmp(cmd, "meminfo")) cmd_meminfo(t);
+    else if (!kstrcmp(cmd, "notify")) cmd_notify(t, rest);
     else if (!kstrcmp(cmd, "whoami")) cmd_whoami(t);
     else if (!kstrcmp(cmd, "color")) cmd_color(t, rest);
     else if (!kstrcmp(cmd, "calc")) cmd_calc(t, rest);
